@@ -1,7 +1,7 @@
 # Build a simple logistic regression model
-simple_glm <- stackoverflow %>%
+simple_glm <- tasrml %>%
   select(-Respondent) %>%
-  glm(Remote ~ .,
+  glm(STATUS ~ .,
       family = "binomial",
       data = .)
 
@@ -11,15 +11,15 @@ summary(simple_glm)
 # Load caret
 library(caret)
 
-stack_select <- stackoverflow %>%
+tasrml_select <- tasrml %>%
   select(-Respondent)
 
 ?createDataPartition
 # Split the data into training and testing sets
 set.seed(1234)
-in_train <- createDataPartition(stack_select$Remote, p = 0.8, list = FALSE)
-training <- stack_select[in_train,]
-testing <- stack_select[-in_train,]
+in_train <- createDataPartition(tasrml_select$STATUS, p = 0.8, list = FALSE)
+training <- tasrml_select[in_train,]
+testing <- tasrml_select[-in_train,]
 
 # Upsampling
 # There are multiple possible approaches to dealing with class imbalance. 
@@ -27,30 +27,30 @@ testing <- stack_select[-in_train,]
 
 # Use the training data set for upsampling, both for x (the predictors) and 
 # y (the class memberships).
-# The label for the class column goes in yname; remember that it is "Remote".
+# The label for the class column goes in yname; remember that it is "Status".
 
-up_train <- upSample(x = select(training, -Remote),
-                     y = training$Remote,
-                     yname = "Remote") %>%
+up_train <- upSample(x = select(training, -STATUS),
+                     y = training$STATUS,
+                     yname = "STATUS") %>%
   as_tibble()
 
 up_train %>%
-  count(Remote)
+  count(STATUS)
 
 # Build a logistic regression model
-stack_glm <- train(Remote ~ ., method = "glm", family = "binomial",
+tasrml_glm <- train(STATUS ~ ., method = "glm", family = "binomial",
                    data = training,
                    trControl = trainControl(method = "boot",
                                             sampling = "up"))
 
 # Build a random forest model
-stack_rf <- train(Remote ~ ., method = "rf", family = "binomial",
+tasrml_rf <- train(STATUS ~ ., method = "rf", family = "binomial",
                    data = training,
                    trControl = trainControl(method = "boot",
                                             sampling = "up"))
 # Print the model object 
-stack_glm
-stack_rf
+tasrml_glm
+tasrml_rf
 
 # Classification model metrics
 # The confusionMatrix() function is helpful but often you want to store specific performance estimates for later, 
@@ -59,8 +59,8 @@ stack_rf
 # you might look at the positive or negative predictive value or perhaps overall accuracy.
 
 # Confusion matrix for logistic regression model
-confusionMatrix(predict(stack_glm, testing),
-                testing$Remote)
+confusionMatrix(predict(tasrml_glm, testing),
+                testing$STATUS)
 
 
 
@@ -69,13 +69,13 @@ library(yardstick)
 
 # Predict values
 testing_results <- testing %>%
-  mutate(`Logistic regression` = predict(stack_glm, testing),
-         `Random forest` = predict(stack_rf, testing))
+  mutate(`Logistic regression` = predict(tasrml_glm, testing),
+         `Random forest` = predict(tasrml_rf, testing))
 
 ## Calculate accuracy
-accuracy(testing_results, truth = Remote, estimate = `Logistic regression`)
-accuracy(testing_results, truth = Remote, estimate = `Random forest`)
+accuracy(testing_results, truth = STATUS, estimate = `Logistic regression`)
+accuracy(testing_results, truth = STATUS, estimate = `Random forest`)
 
 ## Calculate positive predict value
-ppv(testing_results, truth = Remote, estimate = `Logistic regression`)
-ppv(testing_results, truth = Remote, estimate = `Random forest`)
+ppv(testing_results, truth = STATUS, estimate = `Logistic regression`)
+ppv(testing_results, truth = STATUS, estimate = `Random forest`)
